@@ -1,11 +1,12 @@
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { Activity, Notification } from '../types';
 import Snackbar from '../components/Snackbar';
+import apiClient from '../services/apiClient';
 
 interface AppContextType {
   activities: Activity[];
   notifications: Notification[];
-  addActivity: (activity: Omit<Activity, 'id'>) => void;
+  addActivity: (activity: Omit<Activity, 'id'>) => Promise<Activity>;
   addNotification: (notification: Omit<Notification, 'id' | 'date' | 'read'>) => void;
   showSnackbar: (message: string, type?: 'success' | 'error') => void;
 }
@@ -22,9 +23,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setTimeout(() => setSnackbar(null), 3000);
   };
 
-  const addActivity = (newActivity: Omit<Activity, 'id'>) => {
-    const activityWithId: Activity = { ...newActivity, id: `act_${Date.now()}` };
-    setActivities(prev => [activityWithId, ...prev]);
+  useEffect(() => {
+    apiClient<Activity[]>('/activities')
+      .then(setActivities)
+      .catch(() => setActivities([]));
+  }, []);
+
+  const addActivity = async (newActivity: Omit<Activity, 'id'>) => {
+    const created = await apiClient<Activity>('/activities', {
+      method: 'POST',
+      body: JSON.stringify(newActivity),
+    });
+    setActivities(prev => [created, ...prev]);
+    return created;
   };
 
   const addNotification = (newNotification: Omit<Notification, 'id' | 'date' | 'read'>) => {

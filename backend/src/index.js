@@ -1,41 +1,61 @@
 const dotenv = require('dotenv');
-dotenv.config(); // Garante que as variáveis de ambiente sejam carregadas primeiro
+dotenv.config();
 
 const express = require('express');
 const cors = require('cors');
 const passport = require('passport');
 const session = require('express-session');
-require('./config/passport-setup'); // Executa a configuração do Passport
+require('./config/passport-setup');
+
+const authRoutes = require('./routes/authRoutes');
+const clientRoutes = require('./routes/clientRoutes');
+const partnerRoutes = require('./routes/partnerRoutes');
+const opportunityRoutes = require('./routes/opportunityRoutes');
+const transactionRoutes = require('./routes/transactionRoutes');
+const activityRoutes = require('./routes/activityRoutes');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Importação das rotas
-const authRoutes = require('./routes/authRoutes');
-const clientRoutes = require('./routes/clientRoutes');
+const allowedOrigins = (process.env.FRONTEND_URLS || 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim());
 
-// Middlewares essenciais
-app.use(cors({
-  origin: 'http://localhost:3000', // Permite requisições do seu frontend
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Origem não permitida pelo CORS'));
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json());
-app.use(session({
-  secret: process.env.COOKIE_KEY || 'uma_chave_secreta_de_fallback_muito_longa',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 horas
-}));
+
+app.use(
+  session({
+    secret: process.env.COOKIE_KEY || 'uma_chave_secreta_de_fallback_muito_longa',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 24 * 60 * 60 * 1000 },
+  })
+);
+
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Registro das rotas da API
 app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
+app.use('/api/partners', partnerRoutes);
+app.use('/api/opportunities', opportunityRoutes);
+app.use('/api/transactions', transactionRoutes);
+app.use('/api/activities', activityRoutes);
 
-// Rota de verificação
-app.get('/', (req, res) => {
-  res.send('Backend do CRM Financeiro está no ar e configurado corretamente!');
+app.get('/', (_req, res) => {
+  res.send('Backend do CRM Financeiro está em execução!');
 });
 
 app.listen(port, () => {

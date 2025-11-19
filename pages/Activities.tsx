@@ -1,15 +1,23 @@
-import React, { useState } from 'react';
-import { Activity } from '../types';
+import React, { useEffect, useState } from 'react';
+import { Activity, Client } from '../types';
 import Card from '../components/Card';
 import NewActivityForm from '../components/forms/NewActivityForm';
 import { useAppContext } from '../contexts/AppContext';
+import apiClient from '../services/apiClient';
 
 const Activities: React.FC = () => {
     const { activities, addActivity, showSnackbar } = useAppContext();
     const [isNewActivityModalOpen, setIsNewActivityModalOpen] = useState(false);
+    const [clients, setClients] = useState<Client[]>([]);
 
-    const handleAddActivity = (activity: Omit<Activity, 'id'>) => {
-        addActivity(activity);
+    useEffect(() => {
+        apiClient<Client[]>('/clients')
+          .then(setClients)
+          .catch(() => setClients([]));
+    }, []);
+
+    const handleAddActivity = async (activity: Omit<Activity, 'id'>) => {
+        await addActivity(activity);
         setIsNewActivityModalOpen(false);
         showSnackbar('Atividade adicionada com sucesso!', 'success');
     };
@@ -44,10 +52,11 @@ const Activities: React.FC = () => {
               </div>
             </Card>
 
-            <NewActivityForm 
-              isOpen={isNewActivityModalOpen} 
-              onClose={() => setIsNewActivityModalOpen(false)} 
-              onAddActivity={handleAddActivity} 
+            <NewActivityForm
+              isOpen={isNewActivityModalOpen}
+              onClose={() => setIsNewActivityModalOpen(false)}
+              onAddActivity={handleAddActivity}
+              clients={clients}
             />
         </div>
     );
